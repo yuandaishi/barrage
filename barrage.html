@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>弹幕效果</title>
+		<link rel="stylesheet" type="text/css" href="barrage.css"/>
+		<script src="https://cdn.wilddog.com/sdk/js/2.3.8/wilddog.js"></script>
+		<script src="http://pv.sohu.com/cityjson?ie=utf-8"></script>
+	</head>
+	<body>
+		<div class="video_box">
+			<div class="barrage">
+			
+			</div>
+			<video width="800" height="" class="video">
+				<source src="mov_bbb.mp4" type="video/mp4"></source>
+				当前浏览器不支持 video直接播放。
+			</video>
+			<div class="play_box">
+				<a href="javascript:;" class="play"></a>
+				<a href="javascript:;" class="play_no">重播</a>
+			</div>
+			<div class="container">
+				<div class="process">
+					<div class="start">
+						00:00
+					</div>
+					<div class="process_line_box">
+						<div class="process_line">
+							
+						</div>
+						<div class="process_line_load">
+							
+						</div>
+						<div class="process_line_location">
+							
+						</div>
+						<div class="process_dot">
+							
+						</div>
+					</div>
+					<div class="end">
+						00:00
+					</div>
+				</div>
+			</div>
+			<div class="voice">
+				<div class="voice_box">
+					<div class="voice_line">
+					
+					</div>	
+					<div class="voice_true">
+						
+					</div>
+					<div class="voice_dot">
+						
+					</div>
+				</div>
+				<div class="voice_icon voice_icon_on">
+					
+				</div>
+			</div>
+		</div>
+		<input type="text" name="text" id="text" value="" placeholder="说点什么？"/>
+		<div class="action">
+			<a href="javascript:;" class="action_son set">发送弹幕</a>
+			<a href="javascript:;" class="action_son clear">关闭弹幕</a>
+		</div>
+	</body>
+	<script type="text/javascript">
+		var video_box_dom=document.getElementsByClassName("video_box")[0];
+		var video_dom=document.getElementsByClassName("video")[0];
+		var barrage_dom=document.getElementsByClassName("barrage")[0];
+		var v_height=document.defaultView.getComputedStyle(video_dom,null).getPropertyValue("height");//不设置height的话取出来的值不准，就好奇怪,取出来的值少40
+		//console.log(v_height)
+		var v_width=document.defaultView.getComputedStyle(video_dom,null).getPropertyValue("width");
+		var play_dom=document.getElementsByClassName("play")[0];
+		var play_no_dom=document.getElementsByClassName("play_no")[0];
+		var container_dom=document.getElementsByClassName("container")[0];
+		var voice_dom=document.getElementsByClassName("voice")[0];
+		var process_dot_dom=document.getElementsByClassName("process_dot")[0];
+		var voice_dot_dom=document.getElementsByClassName("voice_dot")[0];
+		var process_dom=document.getElementsByClassName("process")[0];
+		var process_line_box_dom=document.getElementsByClassName("process_line_box")[0];
+		var process_width=process_line_box_dom.clientWidth;	
+		var voice_box_dom=document.getElementsByClassName("voice_box")[0];
+		var voice_height=voice_box_dom.clientHeight;
+		var voice_line_dom=document.getElementsByClassName("voice_line")[0];
+		var voice_icon=document.getElementsByClassName("voice_icon")[0];
+		var process_line_location_dom=document.getElementsByClassName("process_line_location")[0];
+		var voice_true_dom=document.getElementsByClassName("voice_true")[0];
+		var end_dom=document.getElementsByClassName("end")[0];
+		var start_dom=document.getElementsByClassName("start")[0];
+		var set_dom=document.getElementsByClassName("set")[0];
+		var clear_dom=document.getElementsByClassName("clear")[0];
+		var text_dom=document.getElementById("text");
+		//console.log(document.getElementsByTagName("body"))
+		var play_con=false;//视频是否播放
+		var process_dot_con=false;//进度条是否点击
+		var voice_dot_con=false;//音量进度条是否点击
+		var is_in_process_dot=false;//点击的地方是否在进度条原点内
+		var is_in_voice_dot=false;//点击的地方是否在音量进度条内
+		var dot_left=process_line_box_dom.offsetLeft-5;//进度点距离左边最小距离
+		var process_dot_left=offset_num(process_dot_dom,"left");//距离window左边距离
+		var voice_dot_top=offset_num(voice_dot_dom,"top");//距离window上边距离
+		var dot_k_voice=0; //声音初始位移量
+		var color_arr=["0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"];
+		barrage_dom.style.cssText="width: "+v_width+"; height: "+v_height+";";
+		video_dom.addEventListener("canplay",function(){//视频或音频可以播放时
+			window.onkeypress=function(e){
+				switch (e.keyCode){
+					case 32:
+						if(!play_con){
+							play()
+							//移动弹幕
+//							var span_dom=barrage_dom.children;
+//							//console.log(span_dom)
+//							var re=/move_barrage/;
+//							if(span_dom.length>0){
+//								Array.prototype.forEach.call(span_dom,function(e){
+//									if(!re.test(e.className)){
+//										e.className="say move_barrage";
+//									}
+//								})
+//							}
+						}else{
+							pause();
+							//暂停弹幕
+//							var span_dom=barrage_dom.children;
+//							console.log(span_dom)
+//							var re=/move_barrage/;
+//							if(span_dom.length>0){
+//								Array.prototype.forEach.call(span_dom,function(e){
+//									if(re.test(e.className)){
+//										setTimeout(function(){
+//											console.log("sss")
+//											e.className="say no_aciton";
+//											console.log(e)
+//										},150)
+//									}
+//								})
+//							}
+						}
+						break;
+					default:
+						break;
+				}
+			}
+			//play();
+		})
+		
+		video_dom.addEventListener("loadedmetadata",function(){//媒体的元数据加载完毕，现在所有的属性包含了它们应有的有效信息
+			var time_true=video_dom.duration;
+			var time_show=time_true|0//0-1s显示1s，1-2s显示1s，所以不是math.round
+			var end_time=set_time(time_show);
+				end_dom.innerHTML=end_time;
+			//每秒代表的长度
+			sec_len=process_width/time_true;
+			
+			video_dom.volume=0.5;//范围从0-1；
+			
+			
+			video_dom.addEventListener("timeupdate",function(){//元素的currentTime属性表示的时间已经改变。(当目前的播放位置已更改时),貌似0.2s多就会执行一次
+				var currentTime=video_dom.currentTime;
+				var currentTime_round=currentTime|0;
+				var currentTime_ture=set_time(currentTime_round);
+				start_dom.innerHTML=currentTime_ture;
+				process_line_location_dom.style.width=sec_len*currentTime+"px";
+				process_dot_dom.style.transform="translateX("+sec_len*currentTime+"px)";
+				var color=set_color(color_arr);
+				show_barrage(currentTime,color);//生成弹幕
+				//移动弹幕
+				var span_dom=barrage_dom.children;
+				//console.log(span_dom)
+				var re=/move_barrage/;
+				if(span_dom.length>0){
+					Array.prototype.forEach.call(span_dom,function(e){
+						if(!re.test(e.className)){
+							e.className="say move_barrage";
+						}
+					})
+				}
+			})
+		})
+
+		video_dom.addEventListener("ended",function(){//播放结束是触发
+			play_no_dom.style.display="block";
+			container_dom.style.transform="translateY(0)";
+			voice_dom.style.transform="translateX(0)";
+			setTimeout(function(){//好像有延迟，所以100ms之后在执行，就能清除
+				var k=barrage_dom.children.length;
+				for(var i=0;i<k;i++){//清除弹幕
+					   barrage_dom.removeChild(barrage_dom.children[0]);
+				}
+			},100)
+			play_con=false;
+		})
+		
+		
+		play_dom.onclick=function(){
+			play();
+		};
+		
+		play_no_dom.onclick=function(){
+			play();   
+		};
+		voice_dot_dom.onmousedown=function(){
+			is_in_voice_dot=true;
+		};
+		process_dot_dom.onmousedown=function(){
+			is_in_process_dot=true;
+		};
+		document.onmouseup=function(){
+			process_dot_con=false;
+			voice_dot_con=false;
+			is_in_voice_dot=false;
+			is_in_process_dot=false;
+		};
+		clear_dom.onclick=function(){//关闭弹幕
+			console.log(barrage_dom.style.display)
+			if(!(barrage_dom.style.display=="none")){
+				barrage_dom.style.display="none";
+				clear_dom.innerHTML="显示弹幕";
+			}else{
+				barrage_dom.style.display="block";
+				clear_dom.innerHTML="关闭弹幕";
+			}
+			
+		};
+		container_dom.onmousemove=function(e){
+			if(process_dot_con){//用e.offsetX会出现不同的参考，所以用e.pageX;
+				var k=e.pageX;
+				var dot_k=k-process_dot_left;
+				if(dot_k<=5){//5是margin值
+					dot_k=0;
+				}else if(dot_k>=process_width){
+					dot_k=process_width;
+				}
+				process_dot_dom.style.transform="translateX("+dot_k+"px)";
+				process_line_location_dom.style.width=dot_k+"px";
+				video_dom.currentTime=dot_k/sec_len;
+			}
+		};
+		container_dom.onmousedown=function(e){
+			process_dot_con=true;
+			if(!is_in_process_dot){//用e.offsetX会出现不同的参考，所以用e.pageX;
+				var k=e.pageX;
+				var dot_k=k-process_dot_left;
+				if(dot_k<=5){//5是margin值
+					dot_k=0;
+				}else if(dot_k>=process_width){
+					dot_k=process_width;
+				}
+				process_dot_dom.style.transform="translateX("+dot_k+"px)";
+				process_line_location_dom.style.width=dot_k+"px";
+				video_dom.currentTime=dot_k/sec_len;
+			}
+		};
+		voice_dom.onmousemove=function(e){
+			if(voice_dot_con){//用e.offsetX会出现不同的参考，所以用e.pageX;
+				var k=e.pageY;
+				dot_k_voice=k-voice_dot_top;
+				if(dot_k_voice<=-40){//5是margin值
+					dot_k_voice=-40;
+				}else if(dot_k_voice>=40){
+//					console.log("hh")
+					voice_icon.className="voice_icon voice_icon_off";
+					dot_k_voice=40;
+				}else{
+					voice_icon.className="voice_icon voice_icon_on";
+				}
+				voice_dot_dom.style.transform="translateY("+dot_k_voice+"px)";
+				voice_true_dom.style.height=(40-dot_k_voice)+"px";
+				video_dom.volume=(40-dot_k_voice)/voice_height;
+			}
+		};
+		
+		voice_dom.onmousedown=function(e){
+			voice_dot_con=true;
+			if(!is_in_voice_dot){//用e.offsetX会出现不同的参考，所以用e.pageX;
+				var k=e.pageY;
+				dot_k_voice=k-voice_dot_top;
+				if(dot_k_voice<=-40){//5是margin值
+					dot_k_voice=-40;
+				}else if(dot_k_voice>=40){
+//					console.log("hh")
+					voice_icon.className="voice_icon voice_icon_off";
+					dot_k_voice=40;
+				}else{
+					voice_icon.className="voice_icon voice_icon_on";
+				}
+				voice_dot_dom.style.transform="translateY("+dot_k_voice+"px)";
+				voice_true_dom.style.height=(40-dot_k_voice)+"px";
+				video_dom.volume=(40-dot_k_voice)/voice_height;
+			}
+		};
+		
+		voice_icon.onmousedown=function(){
+			var class_str=this.className;
+			var re=/voice_icon_off/;
+			if(re.test(class_str)){//按钮是关闭状态
+				voice_dot_dom.style.transform="translateY("+dot_k_voice+"px)";
+				voice_icon.className="voice_icon voice_icon_on";
+				voice_true_dom.style.height=(40-dot_k_voice)+"px";
+				video_dom.volume=(40-dot_k_voice)/voice_height;
+			}else{
+				voice_icon.className="voice_icon voice_icon_off";
+				voice_dot_dom.style.transform="translateY(40px)";
+				voice_true_dom.style.height="0";
+				video_dom.volume=0;
+			}
+			event.stopPropagation();
+		}
+		video_box_dom.onmouseenter=function(){
+			container_dom.style.transform="translateY(0)";
+			voice_dom.style.transform="translateX(0)";
+		}
+		video_box_dom.onmouseleave=function(){
+			container_dom.style.transform="translateY(80px)";
+			voice_dom.style.transform="translateX(50px)";
+		}
+		
+		//有关弹幕效果函数
+		var config = {
+		  syncURL: "https://yds-0.wilddogio.com" //输入节点 URL
+		};
+		wilddog.initializeApp(config);
+		var ref = wilddog.sync().ref();//根对象
+		var refM = wilddog.sync().ref("message")//message对象，有可能不存在？	
+		var ip=returnCitySN["cip"];//本机IP地址
+		
+		//Keys must be non-empty strings and can't contain ".", "#", "$", "/", "[", or "]"，限制真多
+		var ip_t=ip.replace(/\./g,"_");//转换IP，也可以用split和join方法实现
+		//console.log(ip_t);
+//		ref.set({
+//			"message": {
+//				"113_106_79_27": {
+//					"barrage_1":{
+//						"content": "弹幕效果",
+//						"time": "0.550974"
+//					}
+//				}
+//			}
+//		});
+
+		set_dom.onclick = function() {
+			var currentTime = video_dom.currentTime;//console.log(currentTime);
+			var currentContent=text_dom.value;//console.log(currentContent);
+			if(currentContent!==""){
+				wilddog.sync().ref("message/"+ip_t).push({//不存在的话会生成，存在的话，则直接加上
+					"content":currentContent,//属性可以根据需要，自行添加
+					"time":currentTime
+				})	
+			}
+		};
+		
+		function play(){//播放视屏时
+			video_dom.play();
+			play_con=true;
+			play_dom.style.display="none";
+			play_no_dom.style.display="none";
+			container_dom.style.transform="translateY(80px)";
+			voice_dom.style.transform="translateX(50px)";
+		};
+		
+		function pause(){//
+			video_dom.pause();
+			play_con=false;
+			play_dom.style.display="block";
+			container_dom.style.transform="translateY(0)";
+			voice_dom.style.transform="translateX(0)";
+		};
+		
+		function offset_num(a,b){//获取当前元素距离window的上左距离
+			switch (b){
+				case "top":
+					var k=a.offsetTop;
+					while(a.parentElement){//如果父元素dom存在的话
+						k+=a.parentElement.offsetTop;
+						a=a.parentElement;
+					}
+					break;
+				case "left":
+					var k=a.offsetLeft;
+					while(a.parentElement){//如果父元素dom存在的话
+						k+=a.parentElement.offsetLeft;
+						a=a.parentElement;
+					}
+					break;
+				default:
+					break;
+			}
+			return k;
+		}
+		
+		function set_time(a){//秒数转化为分钟数
+			var min=(a/60)|0;
+			if(min<10){
+				min="0"+min;
+			}
+			var sec=a%60;
+			if(sec<10){
+				sec="0"+sec;
+			}
+			return min+":"+sec;
+		}
+		
+		function show_barrage(a,b){//显示弹幕
+			wilddog.sync().ref('message').once("value",function(e){
+				//console.log(e.val())
+				for(var i in e.val()){
+					for(var j in e.val()[i]){
+//						console.log(j)
+//						console.log(e.val()[i][j]["content"]+"||"+e.val()[i][j]["time"]);
+						//console.log(e.val()[i][j]["time"]+"||"+a)
+						if(e.val()[i][j]["time"]<=a+0.13&&e.val()[i][j]["time"]>=a-0.13){//在0.27的区间内
+							var top=20+(Math.random()*(parseInt(v_height)-240))|0;
+							var left=parseInt(v_width)/2+Math.random()*(parseInt(v_width)/2);
+							var str=document.createElement("span");
+							str.style.cssText="position: absolute;right: 0px;font-size: 30px;color: "+b+";top: "+top+"px;";
+							str.className="say";
+							str.innerHTML=e.val()[i][j]["content"];
+							barrage_dom.appendChild(str);
+						}
+					}
+				}
+			});
+		};		
+		
+		function set_color(a){//获取随机色
+			var color="#";
+			for(var i=0;i<6;i++){
+				color+=a[Math.round(Math.random()*(a.length-1))];
+			}
+			return color;
+		}
+	</script>
+</html>
